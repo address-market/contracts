@@ -4,10 +4,8 @@ pragma solidity ^0.8.19;
 import {ERC721EnumerableUpgradeable, ERC721Upgradeable} from "openzeppelin/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {Constants} from "./Constants.sol";
 import {IntermediateFactory} from "./IntermediateFactory.sol";
-import {ECDSAUpgradeable} from "openzeppelin/utils/cryptography/ECDSAUpgradeable.sol";
+import {DustNFT} from "./DustNFT.sol";
 import {OwnableUpgradeable} from "openzeppelin/access/OwnableUpgradeable.sol";
-import "openzeppelin-contracts/contracts/proxy/Clones.sol";
-import {console} from "forge-std/console.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract MainFactory is
@@ -15,9 +13,9 @@ contract MainFactory is
   Constants,
   OwnableUpgradeable
 {
-  using ECDSAUpgradeable for bytes32;
+  event SetIntermediateFactory(IntermediateFactory intermediateFactory);
+  event SetDustNft(DustNFT dustNft);
 
-  // a proxy of IntermediateFactory, address fixed on every chain permanently
   IntermediateFactory public intermediateFactory;
 
   string public metaUri;
@@ -25,21 +23,25 @@ contract MainFactory is
   mapping(bytes32 => bool) private hashUsed;
   mapping(bytes32 => address) private whoCommited;
   mapping(uint256 => bytes32) public tokenIdToSalt;
-  mapping(uint256 => bool) public permanentLock;
+  uint256 reservedForPermanentLock;
+  // mapping(uint256 => bool) public permanentLock;
 
-  mapping(uint256 => uint256) public deployPrices; // reserved for future use
+  uint256 reservedForDeployPrices;
+  // mapping(uint256 => uint256) public deployPrices;
+
+  DustNFT public dustNft;
 
   uint256[50] _____gap;
 
   function initialize(
     IntermediateFactory _intermediateFactory
   ) external initializer {
-    // TODO security when deploying
     __ERC721_init("NFT Address Option", "OPT");
     __ERC721Enumerable_init();
     __Ownable_init();
 
     intermediateFactory = _intermediateFactory;
+    emit SetIntermediateFactory(_intermediateFactory);
   }
 
   function setMetaUri(string calldata _metaUri) external onlyOwner {
@@ -74,96 +76,50 @@ contract MainFactory is
     emit Mint(msg.sender, tokenId, salt, addressPrecomputed);
   }
 
-  function _deploy(bytes32 salt, bytes memory code) internal {
-    IntermediateFactory intermediateFactoryClone = IntermediateFactory(
-      Clones.cloneDeterministic(address(intermediateFactory), salt)
-    );
-    console2.logBytes(address(intermediateFactoryClone).code);
-    console.log(
-      "intermediateFactory",
-      address(intermediateFactory)
-    );
-    console2.logBytes32(salt);
-    console.log(
-      "intermediateFactoryClone",
-      address(intermediateFactoryClone)
-    );
-
-    intermediateFactoryClone.deploy(code); // deploy from factory using create opcode (not create2)
-    // intermediateFactoryClone.destroy();
+  // deploys ./yul/UpgradeableClone.yul
+  // 0x6034600d60003960346000f3fe6000548060008114602b573660008037600080366000855af43d6000803e806026573d6000fd5b3d6000f35b6000356000555050
+  function UpgradeableCloneDeterministic(bytes32 salt) internal returns (address instance) {
+    assembly {
+      let position := mload(0x40)
+      mstore(position, 0x60)
+      mstore(add(position, 0x20), 0x34600d60003960346000f3fe6000548060008114602b57366000803760008036)
+      mstore(add(position, 0x40), 0x6000855af43d6000803e806026573d6000fd5b3d6000f35b6000356000555050)
+      instance := create2(0, add(position, 0x1f), 65, salt)
+    }
+    require(instance != address(0), "Create2 failed");
   }
 
-  event Salt(bytes32);
+  function _deploy(bytes32 salt, bytes memory code) internal returns (address) {
+    address cloneAddress = UpgradeableCloneDeterministic(salt);
+    (bool success, ) = cloneAddress.call(abi.encode(intermediateFactory));
+    require(success); // TODO
+    IntermediateFactory intermediateFactoryClone = IntermediateFactory(cloneAddress);
 
-  function deploy(uint256 tokenId, bytes memory code) external {
-    // TODO check owner
+    return intermediateFactoryClone.deploy(code); // deploy from factory using create opcode (not create2)
+  }
+
+  function deploy(uint256 tokenId, bytes memory code) external returns (address deployedAddress) {
+    if (ownerOf(tokenId) != msg.sender) {
+      revert WrongOwner();
+    }
     bytes32 salt = tokenIdToSalt[tokenId];
-    emit Salt(salt);
-    _deploy(salt, code);
+    deployedAddress = _deploy(salt, code);
     _burn(tokenId);
+    dustNft.mint(msg.sender, tokenId);
   }
-
-  // function deployBySignature(
-  //   bytes32 salt,
-  //   bytes memory code,
-  //   bytes32 hash,
-  //   uint8 v,
-  //   bytes32 r,
-  //   bytes32 s
-  // ) external {
-  //   (address signer, ECDSAUpgradeable.RecoverError error) = hash.tryRecover(
-  //     v,
-  //     r,
-  //     s
-  //   );
-  //   if (error != ECDSAUpgradeable.RecoverError.NoError) {
-  //     revert RecoverError(error);
-  //   }
-  //   if (signer != msg.sender) {
-  //     revert WrongSigner();
-  //   }
-  //   _deploy(salt, code);
-  // }
-
-  // function deploySafe(
-  //   uint256 tokenId,
-  //   address[] calldata _owners,
-  //   uint256 _threshold
-  // ) external {
-  //   bytes32 salt = tokenIdToSalt[tokenId];
-  //   IntermediateFactory factory;
-  //   bytes memory factoryCode = type(IntermediateFactory).creationCode;
-  //   assembly {
-  //     factory := create2(
-  //       0,
-  //       add(factoryCode, 0x20),
-  //       mload(factoryCode),
-  //       salt
-  //     )
-  //     if iszero(extcodesize(factory)) {
-  //       revert(0, 0)
-  //     }
-  //   }
-  //   factory.deploySafeClone(_owners, _threshold); // deploy from factory using create opcode (not create2)
-  //   _burn(tokenId);
-  // }
 
   // override ERC721 methods
   function _baseURI() internal view override returns (string memory) {
     return metaUri;
   }
 
-  function _beforeTokenTransfer(
-    address from,
-    address to,
-    uint256 firstTokenId,
-    uint256 batchSize
-  ) internal view override {
-    if (permanentLock[firstTokenId] && to != address(0)) {
-      revert TokenLocked();
-    }
-    from;
-    to;
-    batchSize;
+  function setIntermediateFactory(IntermediateFactory _intermediateFactory) external onlyOwner {
+    intermediateFactory = _intermediateFactory;
+    emit SetIntermediateFactory(_intermediateFactory);
+  }
+
+  function setDustNft(DustNFT _dustNft) external onlyOwner {
+    dustNft = _dustNft;
+    emit SetDustNft(_dustNft);
   }
 }

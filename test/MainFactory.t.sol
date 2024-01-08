@@ -7,11 +7,11 @@ import "../src/IntermediateFactory.sol";
 import "../src/Constants.sol";
 import { console } from "forge-std/console.sol";
 import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
 
 contract MainFactoryTest is Test, Constants {
   MainFactory public mainFactory;
-  IntermediateFactory public intermediateFactory;
 
   address constant _OWNER = 0x90Ad080DBfd9cB333bA200025f3a2666071555D9;
 
@@ -19,27 +19,25 @@ contract MainFactoryTest is Test, Constants {
     vm.startPrank(_OWNER);
     vm.deal(_OWNER, 100 ether);
     console.log("owner: %s", _OWNER);
-    // 1) deploy IF-Implementation
-    IntermediateFactory _intermediateFactory = new IntermediateFactory();
-    // 2) deploy MF-Implementation
-    MainFactory _mainFactory = new MainFactory();
-    // 3) deploy IF-Proxy
-    ITransparentUpgradeableProxy intFactoryProxy = ITransparentUpgradeableProxy(address(new TransparentUpgradeableProxy(
-      address(_intermediateFactory),
-      msg.sender,
-      abi.encodeWithSelector(IntermediateFactory.initialize.selector)
-    )));
-    console.log("intFactoryProxy: %s", address(intFactoryProxy));
-    // 4) deploy MF-Proxy
-    ITransparentUpgradeableProxy mainFactoryProxy = ITransparentUpgradeableProxy(address(new TransparentUpgradeableProxy(
-      address(_mainFactory),
-      msg.sender,
-      abi.encodeWithSelector(MainFactory.initialize.selector, _intermediateFactory)
-    )));
-    console.log("mainFactoryProxy: %s", address(mainFactoryProxy));
 
-    mainFactory = MainFactory(address(mainFactoryProxy));
-    intermediateFactory = IntermediateFactory(address(intFactoryProxy));
+    // 1) deploy ProxyAdmin
+    ProxyAdmin proxyAdmin = new ProxyAdmin();
+    // 2) deploy IF
+    IntermediateFactory intermediateFactory = new IntermediateFactory();
+    // 3) deploy MF-Implementation
+    MainFactory mainFactoryImplementation = new MainFactory();
+    // 4) deploy MF-Proxy 0xfBA25AcF53b559eA4feB3ed69F357189FCc4F421
+    TransparentUpgradeableProxy MFProxy = new TransparentUpgradeableProxy(
+      address(mainFactoryImplementation),
+      address(proxyAdmin),
+      abi.encodeWithSelector(MainFactory.initialize.selector, intermediateFactory)
+    );
+
+    // 5) deploy DustNFT
+    DustNFT dustNft = new DustNFT(address(MFProxy));
+    MainFactory(address(MFProxy)).setDustNft(dustNft);
+
+    mainFactory = MainFactory(address(MFProxy));
   }
 
   function testMintNft() external {
@@ -59,8 +57,8 @@ contract MainFactoryTest is Test, Constants {
     emit Mint(_OWNER, tokenId, salt, precomputed);
     mainFactory.reveal(salt, randomFactor);
 
-    bytes memory sampleCode = type(IntermediateFactory).creationCode;
-    mainFactory.deploy(tokenId, sampleCode);
+    bytes memory testCode = abi.encodePacked(uint88(0x600180600b6000396000f3));
+    mainFactory.deploy(tokenId, testCode);
   }
 
   function testCommitRevealMint() public {

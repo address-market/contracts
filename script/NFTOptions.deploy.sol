@@ -4,7 +4,9 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import { MainFactory } from "../src/MainFactory.sol";
 import { IntermediateFactory } from "../src/IntermediateFactory.sol";
+import { DustNFT } from "../src/DustNFT.sol";
 import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import { console } from "forge-std/console.sol";
 
 /**
@@ -16,25 +18,26 @@ import { console } from "forge-std/console.sol";
 contract NFTOptionsDeploy is Script {
   function run() external {
     vm.startBroadcast();
-    // 1) deploy IF-Implementation
-    IntermediateFactory intermediateFactory = new IntermediateFactory();
-    // 2) deploy MF-Implementation
-    MainFactory mainFactory = new MainFactory();
+    // 1) deploy ProxyAdmin
+    ProxyAdmin proxyAdmin = new ProxyAdmin();
 
-    // 3) deploy IF-Proxy 0xdA0741E313711FE2586A4Ffe6e52E27D08826b09
-    TransparentUpgradeableProxy IFProxy = new TransparentUpgradeableProxy(
-      address(intermediateFactory),
-      msg.sender,
-      abi.encodeWithSelector(IntermediateFactory.initialize.selector)
-    );
+    // 2) deploy IF-Implementation
+    IntermediateFactory intermediateFactory = new IntermediateFactory();
+    
+    // 3) deploy MF-Implementation
+    MainFactory mainFactoryImplementation = new MainFactory();
+
     // 4) deploy MF-Proxy 0xfBA25AcF53b559eA4feB3ed69F357189FCc4F421
     TransparentUpgradeableProxy MFProxy = new TransparentUpgradeableProxy(
-      address(mainFactory),
-      msg.sender,
-      abi.encodeWithSelector(MainFactory.initialize.selector, IFProxy)
+      address(mainFactoryImplementation),
+      address(proxyAdmin),
+      abi.encodeWithSelector(MainFactory.initialize.selector, intermediateFactory)
     );
+
+    // 5) deploy DustNFT
+    DustNFT dustNft = new DustNFT(address(MFProxy));
+    MainFactory(address(MFProxy)).setDustNft(dustNft);
+
     vm.stopBroadcast();
-    console.log("IF Proxy: %s", address(IFProxy));
-    console.log("MF Proxy: %s", address(MFProxy));
   }
 }
