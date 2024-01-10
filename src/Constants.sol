@@ -21,19 +21,8 @@ abstract contract Constants {
   error AddressWasDeployed();
   error WrongOwner();
 
-  function _factoryAddress(bytes32 salt) internal pure returns (address factoryAddressPrecomputed) {
-    address mainFactory = 0xfBA25AcF53b559eA4feB3ed69F357189FCc4F421;
-    bytes memory creationCode = abi.encodePacked(uint184(0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000), uint160(0xdA0741E313711FE2586A4Ffe6e52E27D08826b09), uint120(0x5af43d82803e903d91602b57fd5bf3));
-    factoryAddressPrecomputed = address(uint160(uint256(keccak256(abi.encodePacked(
-      bytes1(0xff),
-      address(mainFactory),
-      salt,
-      keccak256(creationCode)
-    )))));
-  }
-
   function _precompute(address mainFactory, bytes32 salt) internal pure returns (address) {
-    bytes memory creationCode = abi.encodePacked(uint184(0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000), uint160(0xdA0741E313711FE2586A4Ffe6e52E27D08826b09), uint120(0x5af43d82803e903d91602b57fd5bf3));
+    bytes memory creationCode = abi.encodePacked(uint8(0x60), uint256(0x34600d60003960346000f3fe6000548060008114602b57366000803760008036), uint256(0x6000855af43d6000803e806026573d6000fd5b3d6000f35b6000356000555050));
     address factoryAddressPrecomputed = address(uint160(uint256(keccak256(abi.encodePacked(
       bytes1(0xff),
       address(mainFactory),

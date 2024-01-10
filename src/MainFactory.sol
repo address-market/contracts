@@ -6,7 +6,6 @@ import {Constants} from "./Constants.sol";
 import {IntermediateFactory} from "./IntermediateFactory.sol";
 import {DustNFT} from "./DustNFT.sol";
 import {OwnableUpgradeable} from "openzeppelin/access/OwnableUpgradeable.sol";
-import {console2} from "forge-std/console2.sol";
 
 contract MainFactory is
   ERC721EnumerableUpgradeable,
@@ -33,10 +32,17 @@ contract MainFactory is
 
   uint256[50] _____gap;
 
+  event Modified();
+
+  function modify() external { // 0x64cf33b8
+    // code for modifying while upgrading
+    emit Modified();
+  }
+
   function initialize(
     IntermediateFactory _intermediateFactory
   ) external initializer {
-    __ERC721_init("NFT Address Option", "OPT");
+    __ERC721_init("Address Market", "ADD");
     __ERC721Enumerable_init();
     __Ownable_init();
 

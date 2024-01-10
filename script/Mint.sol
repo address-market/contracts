@@ -18,9 +18,9 @@ import { MainFactory } from "../src/MainFactory.sol";
 contract Mint is Script {
   function run() external {
     vm.startBroadcast();
-    MainFactory mainFactory = MainFactory(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0); // in anvil
-    bytes32 salt = bytes32(uint256(9436912254747097));
-    uint256 randomFactor = 31337;
+    MainFactory mainFactory = MainFactory(0x551518ceA0b6f972fE6707B4c233d3E5db2c990b);
+    bytes32 salt = bytes32(uint256(424681860255));
+    uint256 randomFactor = 205975080;
     bytes32 hash = keccak256(abi.encodePacked(salt, randomFactor));
     mainFactory.commit(hash);
     uint256 tokenId = mainFactory.reveal(salt, randomFactor);
@@ -35,11 +35,11 @@ contract Mint is Script {
     vm.stopBroadcast();
 
     // test deployed contract
-    console2.logBytes(deployed.code);
-    (bool success, bytes memory returnal) = deployed.call("test");
-    require(success, "call failed");
-    console2.log("return:");
-    console2.logBytes(returnal);
+    // console2.logBytes(deployed.code);
+    // (bool success, bytes memory returnal) = deployed.call("test");
+    // require(success, "call failed");
+    // console2.log("return:");
+    // console2.logBytes(returnal);
   }
 }
 

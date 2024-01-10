@@ -13,7 +13,7 @@ import { ProxyAdmin } from "openzeppelin-contracts/contracts/proxy/transparent/P
 contract MainFactoryTest is Test, Constants {
   MainFactory public mainFactory;
 
-  address constant _OWNER = 0x90Ad080DBfd9cB333bA200025f3a2666071555D9;
+  address constant _OWNER = 0xAdd01b8A3224003694aE0897290320Cf25b31387;
 
   function setUp() public {
     vm.startPrank(_OWNER);
@@ -42,7 +42,7 @@ contract MainFactoryTest is Test, Constants {
 
   function testMintNft() external {
     uint256 randomFactor = 123;
-    bytes32 salt = bytes32(uint256(111));
+    bytes32 salt = bytes32(uint256(131035919034));
 
     // predict address for the salt
     address precomputed = _precompute(address(mainFactory), salt);
@@ -62,8 +62,6 @@ contract MainFactoryTest is Test, Constants {
   }
 
   function testCommitRevealMint() public {
-    console.log('precomp addr', _precompute(0xfBA25AcF53b559eA4feB3ed69F357189FCc4F421, bytes32(uint256(6167569445235488))));
-
     uint256 randomFactor = 12345;
     bytes32 salt = bytes32(uint256(keccak256(abi.encodePacked("salt"))));
     bytes32 wrongSalt = bytes32(uint256(keccak256(abi.encodePacked("wrongSalt"))));
@@ -85,8 +83,9 @@ contract MainFactoryTest is Test, Constants {
     mainFactory.reveal(salt, randomFactor);
 
     bytes memory sampleCode = type(IntermediateFactory).creationCode;
-    mainFactory.deploy(tokenId, sampleCode);
+    address deployed = mainFactory.deploy(tokenId, sampleCode);
 
+    assertEq(deployed, precomputed, "deployed address should be precomputed");
 
     // TODO used hash
   }
