@@ -6,18 +6,11 @@ import { MainFactory } from "../src/MainFactory.sol";
 import { ProxyAdmin } from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import { ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract MainFactoryUpgrade is Script {
+contract SetMetadata is Script {
   function run() external {
     vm.startBroadcast();
-    ProxyAdmin proxyAdmin = ProxyAdmin(0x7D676152A17c8eaa83e63035158bc71e3893b7C4);
-    MainFactory mainFactoryImplementation = new MainFactory();
-
-    proxyAdmin.upgradeAndCall(
-      ITransparentUpgradeableProxy(0xdfADA12fBEe1e558134a43558728cB8e944650Dd), // proxy
-      address(mainFactoryImplementation),
-      abi.encodeWithSelector(MainFactory.modify.selector)
-    );
-
+    MainFactory mainFactory = MainFactory(0xBB884d4EaB637520Ea4e1976D1418EFCAe90D67D);
+    mainFactory.setMetaUri('https://meta.address-market.com/bound/');
     vm.stopBroadcast();
   }
 }

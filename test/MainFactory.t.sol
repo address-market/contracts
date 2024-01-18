@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../src/MainFactory.sol";
+import "../src/BoundAddressNFT.sol";
 import "../src/IntermediateFactory.sol";
 import "../src/Constants.sol";
 import { console } from "forge-std/console.sol";
@@ -12,32 +13,43 @@ import { ProxyAdmin } from "openzeppelin-contracts/contracts/proxy/transparent/P
 
 contract MainFactoryTest is Test, Constants {
   MainFactory public mainFactory;
+  BoundAddressNFT public boundAddressNFT;
 
-  address constant _OWNER = 0xAdd01b8A3224003694aE0897290320Cf25b31387;
+  address constant _OWNER = 0xD051a9EA4A68B0143d49bAbf226BdAeba316bF05;
 
   function setUp() public {
     vm.startPrank(_OWNER);
     vm.deal(_OWNER, 100 ether);
-    console.log("owner: %s", _OWNER);
+
+    // deploy process should match AddressMarket.deploy.sol
 
     // 1) deploy ProxyAdmin
     ProxyAdmin proxyAdmin = new ProxyAdmin();
+
     // 2) deploy IF
     IntermediateFactory intermediateFactory = new IntermediateFactory();
+    
     // 3) deploy MF-Implementation
     MainFactory mainFactoryImplementation = new MainFactory();
-    // 4) deploy MF-Proxy 0xfBA25AcF53b559eA4feB3ed69F357189FCc4F421
+
+    // 4) set up MF-Proxy
     TransparentUpgradeableProxy MFProxy = new TransparentUpgradeableProxy(
       address(mainFactoryImplementation),
       address(proxyAdmin),
-      abi.encodeWithSelector(MainFactory.initialize.selector, intermediateFactory)
+      abi.encodeWithSelector(MainFactory.initialize.selector, address(intermediateFactory))
     );
 
-    // 5) deploy DustNFT
-    DustNFT dustNft = new DustNFT(address(MFProxy));
-    MainFactory(address(MFProxy)).setDustNft(dustNft);
+    // 5) deploy BoundAddressNFT
+    BoundAddressNFT boundAddressNftLogic = new BoundAddressNFT();
+    TransparentUpgradeableProxy boundAddressNftProxy = new TransparentUpgradeableProxy(
+      address(boundAddressNftLogic),
+      address(proxyAdmin),
+      abi.encodeWithSelector(BoundAddressNFT.initialize.selector, address(MFProxy))
+    );
+    MainFactory(address(MFProxy)).setBoundAddressNFT(BoundAddressNFT(address(boundAddressNftProxy)));
 
     mainFactory = MainFactory(address(MFProxy));
+    boundAddressNFT = BoundAddressNFT(address(boundAddressNftProxy));
   }
 
   function testMintNft() external {

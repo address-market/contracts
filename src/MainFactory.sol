@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ERC721EnumerableUpgradeable, ERC721Upgradeable} from "openzeppelin/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {ERC721EnumerableUpgradeable} from "openzeppelin/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {Constants} from "./Constants.sol";
 import {IntermediateFactory} from "./IntermediateFactory.sol";
-import {DustNFT} from "./DustNFT.sol";
+import {BoundAddressNFT} from "./BoundAddressNFT.sol";
 import {OwnableUpgradeable} from "openzeppelin/access/OwnableUpgradeable.sol";
 
 contract MainFactory is
@@ -13,7 +13,7 @@ contract MainFactory is
   OwnableUpgradeable
 {
   event SetIntermediateFactory(IntermediateFactory intermediateFactory);
-  event SetDustNft(DustNFT dustNft);
+  event SetBoundAddressNFT(BoundAddressNFT boundAddressNFT);
 
   IntermediateFactory public intermediateFactory;
 
@@ -28,7 +28,7 @@ contract MainFactory is
   uint256 reservedForDeployPrices;
   // mapping(uint256 => uint256) public deployPrices;
 
-  DustNFT public dustNft;
+  BoundAddressNFT public boundAddressNFT;
 
   uint256[50] _____gap;
 
@@ -42,7 +42,7 @@ contract MainFactory is
   function initialize(
     IntermediateFactory _intermediateFactory
   ) external initializer {
-    __ERC721_init("Address Market", "ADD");
+    __ERC721_init("Address NFT", "ADDR");
     __ERC721Enumerable_init();
     __Ownable_init();
 
@@ -59,6 +59,12 @@ contract MainFactory is
     if (whoCommited[_hash] != address(0)) revert CommittedHash();
     whoCommited[_hash] = msg.sender;
     emit Commit(msg.sender, _hash);
+  }
+
+  function saltUsed(bytes32 salt) external view returns (bool used) {
+    address addressPrecomputed = _precompute(address(this), salt);
+    uint256 tokenId = uint256(uint160(addressPrecomputed));
+    return tokenIdToSalt[tokenId] != 0;
   }
 
   function reveal(bytes32 salt, uint256 randomFactor) external returns (uint256 tokenId) {
@@ -95,6 +101,13 @@ contract MainFactory is
     require(instance != address(0), "Create2 failed");
   }
 
+  function _deployIntermediateFactory(bytes32 salt) internal returns (IntermediateFactory) {
+    address cloneAddress = UpgradeableCloneDeterministic(salt);
+    (bool success, ) = cloneAddress.call(abi.encode(intermediateFactory));
+    require(success); // TODO
+    return IntermediateFactory(cloneAddress);
+  }
+
   function _deploy(bytes32 salt, bytes memory code) internal returns (address) {
     address cloneAddress = UpgradeableCloneDeterministic(salt);
     (bool success, ) = cloneAddress.call(abi.encode(intermediateFactory));
@@ -109,9 +122,33 @@ contract MainFactory is
       revert WrongOwner();
     }
     bytes32 salt = tokenIdToSalt[tokenId];
-    deployedAddress = _deploy(salt, code);
+    IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
+    deployedAddress = intermediateFactoryClone.deploy(code);
     _burn(tokenId);
-    dustNft.mint(msg.sender, tokenId);
+    boundAddressNFT.mint(msg.sender, tokenId, true);
+  }
+
+  function deployTransparentProxy(
+    uint256 tokenId,
+    address logic,
+    address admin
+  ) external returns (address deployedAddress) {
+    if (ownerOf(tokenId) != msg.sender) {
+      revert WrongOwner();
+    }
+    bytes32 salt = tokenIdToSalt[tokenId];
+    IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
+    deployedAddress = intermediateFactoryClone.deployTransparentProxy(logic, admin);
+    _burn(tokenId);
+    boundAddressNFT.mint(msg.sender, tokenId, true);
+  }
+
+  function bind(uint256 tokenId) external {
+    if (ownerOf(tokenId) != msg.sender) {
+      revert WrongOwner();
+    }
+    _burn(tokenId);
+    boundAddressNFT.mint(msg.sender, tokenId, false);
   }
 
   // override ERC721 methods
@@ -124,8 +161,8 @@ contract MainFactory is
     emit SetIntermediateFactory(_intermediateFactory);
   }
 
-  function setDustNft(DustNFT _dustNft) external onlyOwner {
-    dustNft = _dustNft;
-    emit SetDustNft(_dustNft);
+  function setBoundAddressNFT(BoundAddressNFT _boundAddressNFT) external onlyOwner {
+    boundAddressNFT = _boundAddressNFT;
+    emit SetBoundAddressNFT(_boundAddressNFT);
   }
 }
