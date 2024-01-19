@@ -14,3 +14,6 @@
 [submodule "lib/deploy-yul"]
 	path = lib/deploy-yul
 	url = https://github.com/crystalbit/deploy-yul
+[submodule "lib/solidity-examples"]
+	path = lib/solidity-examples
+	url = https://github.com/LayerZero-Labs/solidity-examples

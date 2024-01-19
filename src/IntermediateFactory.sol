@@ -16,8 +16,8 @@ contract IntermediateFactory {
     }
   }
 
-  function deployTransparentProxy(address logic, address admin) external returns (address addr) {
-    TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(logic, admin, "");
+  function deployTransparentProxy(address logic, address admin, bytes calldata data) external returns (address addr) {
+    TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(logic, admin, data);
     return address(proxy);
   }
 

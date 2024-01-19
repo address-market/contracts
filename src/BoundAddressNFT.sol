@@ -38,6 +38,13 @@ contract BoundAddressNFT is ERC721EnumerableUpgradeable, OwnableUpgradeable {
     _mint(owner, tokenId);
   }
 
+  function setDeployed(uint256 tokenId) external {
+    if (msg.sender != mainFactory) {
+      revert WrongCaller();
+    }
+    deployed[tokenId] = true;
+  }
+
   function burn(uint256 tokenId) external {
     if (msg.sender != ownerOf(tokenId)) {
       revert NotAnOwner();

@@ -7,13 +7,23 @@ import {IntermediateFactory} from "./IntermediateFactory.sol";
 import {BoundAddressNFT} from "./BoundAddressNFT.sol";
 import {OwnableUpgradeable} from "openzeppelin/access/OwnableUpgradeable.sol";
 
+
+interface ILayerZeroEndpoint {
+  function send(
+    uint16 _dstChainId,
+    bytes calldata _destination, bytes calldata _payload, address payable _refundAddress, address _zroPaymentAddress, bytes calldata _adapterParams) external payable;
+}
+
 contract MainFactory is
   ERC721EnumerableUpgradeable,
   Constants,
   OwnableUpgradeable
 {
+  error CannotSendToChain();
   event SetIntermediateFactory(IntermediateFactory intermediateFactory);
   event SetBoundAddressNFT(BoundAddressNFT boundAddressNFT);
+  event ChainAdded(uint16 indexed);
+  event ChainDeleted(uint16 indexed);
 
   IntermediateFactory public intermediateFactory;
 
@@ -22,8 +32,7 @@ contract MainFactory is
   mapping(bytes32 => bool) private hashUsed;
   mapping(bytes32 => address) private whoCommited;
   mapping(uint256 => bytes32) public tokenIdToSalt;
-  uint256 reservedForPermanentLock;
-  // mapping(uint256 => bool) public permanentLock;
+  mapping(uint16 => bool) public chainsToMint;
 
   uint256 reservedForDeployPrices;
   // mapping(uint256 => uint256) public deployPrices;
@@ -36,6 +45,8 @@ contract MainFactory is
 
   function modify() external { // 0x64cf33b8
     // code for modifying while upgrading
+    chainsToMint[145] = true;
+    emit ChainAdded(145);
     emit Modified();
   }
 
@@ -52,6 +63,15 @@ contract MainFactory is
 
   function setMetaUri(string calldata _metaUri) external onlyOwner {
     metaUri = _metaUri;
+  }
+
+  function toggleChainToMint(uint16 chainId, bool toggle) public onlyOwner {
+    chainsToMint[chainId] = toggle;
+    if (toggle) {
+      emit ChainAdded(chainId);
+    } else {
+      emit ChainDeleted(chainId);
+    }
   }
 
   function commit(bytes32 _hash) external {
@@ -117,30 +137,47 @@ contract MainFactory is
     return intermediateFactoryClone.deploy(code); // deploy from factory using create opcode (not create2)
   }
 
-  function deploy(uint256 tokenId, bytes memory code) external returns (address deployedAddress) {
-    if (ownerOf(tokenId) != msg.sender) {
-      revert WrongOwner();
+  modifier manageTokens(uint256 tokenId) {
+    bool forBound = false;
+    if (_exists(tokenId)) {
+      if (ownerOf(tokenId) != msg.sender) {
+        revert WrongOwner();
+      }
+    } else {
+      if (boundAddressNFT.ownerOf(tokenId) != msg.sender) {
+        // also throw if not exists
+        revert WrongOwner();
+      } else {
+        forBound = true;
+      }
     }
+    _;
+    if (!forBound) {
+      _burn(tokenId);
+      boundAddressNFT.mint(msg.sender, tokenId, true);
+    } else {
+      boundAddressNFT.setDeployed(tokenId);
+    }
+  }
+
+  function deploy(
+    uint256 tokenId,
+    bytes memory code
+  ) external manageTokens(tokenId) returns (address deployedAddress) {
     bytes32 salt = tokenIdToSalt[tokenId];
     IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
     deployedAddress = intermediateFactoryClone.deploy(code);
-    _burn(tokenId);
-    boundAddressNFT.mint(msg.sender, tokenId, true);
   }
 
   function deployTransparentProxy(
     uint256 tokenId,
     address logic,
-    address admin
-  ) external returns (address deployedAddress) {
-    if (ownerOf(tokenId) != msg.sender) {
-      revert WrongOwner();
-    }
+    address admin,
+    bytes calldata data
+  ) external manageTokens(tokenId) returns (address deployedAddress) {
     bytes32 salt = tokenIdToSalt[tokenId];
     IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
-    deployedAddress = intermediateFactoryClone.deployTransparentProxy(logic, admin);
-    _burn(tokenId);
-    boundAddressNFT.mint(msg.sender, tokenId, true);
+    deployedAddress = intermediateFactoryClone.deployTransparentProxy(logic, admin, data);
   }
 
   function bind(uint256 tokenId) external {
@@ -149,6 +186,26 @@ contract MainFactory is
     }
     _burn(tokenId);
     boundAddressNFT.mint(msg.sender, tokenId, false);
+  }
+
+  function mintCrosschain(uint16 chainId, uint256 tokenId) external payable {
+    if (chainsToMint[chainId] == false) {
+      revert CannotSendToChain();
+    }
+    if (boundAddressNFT.ownerOf(tokenId) != msg.sender) {
+      revert WrongOwner();
+    }
+    ILayerZeroEndpoint endpoint = ILayerZeroEndpoint(0x3c2269811836af69497E5F486A85D7316753cf62);
+    bytes memory data = abi.encode(msg.sender, tokenIdToSalt[tokenId]);
+    bytes memory remoteAndLocalAddresses = abi.encodePacked(address(this), address(this));
+      endpoint.send{ value: msg.value }(
+      chainId,
+      remoteAndLocalAddresses,
+      data,
+      payable(msg.sender),
+      address(0x0),
+      bytes("")
+    );
   }
 
   // override ERC721 methods

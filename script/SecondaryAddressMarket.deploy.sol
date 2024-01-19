@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import { MainFactory } from "../src/MainFactory.sol";
+import { SecondaryMainFactory } from "../src/SecondaryMainFactory.sol";
 import { IntermediateFactory } from "../src/IntermediateFactory.sol";
 import { BoundAddressNFT } from "../src/BoundAddressNFT.sol";
 import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -15,7 +15,7 @@ import { console } from "forge-std/console.sol";
  * IF Proxy: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
  * MF Proxy: 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
  */
-contract AddressMarketDeploy is Script {
+contract SecondaryAddressMarketDeploy is Script {
   function run() external {
     vm.startBroadcast();
 
@@ -26,13 +26,13 @@ contract AddressMarketDeploy is Script {
     IntermediateFactory intermediateFactory = new IntermediateFactory();
     
     // 3) deploy MF-Implementation
-    MainFactory mainFactoryImplementation = new MainFactory();
+    SecondaryMainFactory mainFactoryImplementation = new SecondaryMainFactory();
 
-    // 4) deploy MF-Proxy
+    // 4) set up MF-Proxy
     TransparentUpgradeableProxy MFProxy = new TransparentUpgradeableProxy(
       address(mainFactoryImplementation),
       address(proxyAdmin),
-      abi.encodeWithSelector(MainFactory.initialize.selector, address(intermediateFactory))
+      abi.encodeWithSelector(SecondaryMainFactory.initialize.selector, address(intermediateFactory), 0x9740FF91F1985D8d2B71494aE1A2f723bb3Ed9E4)
     );
 
     // 5) deploy BoundAddressNFT
@@ -43,11 +43,9 @@ contract AddressMarketDeploy is Script {
       address(proxyAdmin),
       abi.encodeWithSelector(BoundAddressNFT.initialize.selector, address(MFProxy))
     );
-    MainFactory(address(MFProxy)).setBoundAddressNFT(BoundAddressNFT(address(boundAddressNftProxy)));
-    MainFactory(address(MFProxy)).setMetaUri("https://meta.address-market.com/");
+    SecondaryMainFactory(address(MFProxy)).setBoundAddressNFT(BoundAddressNFT(address(boundAddressNftProxy)));
     BoundAddressNFT(address(boundAddressNftProxy)).setMetaUri("https://meta.address-market.com/bound/");
-    MainFactory(address(MFProxy)).toggleChainToMint(116, true);
-    MainFactory(address(MFProxy)).toggleChainToMint(145, true);
+    SecondaryMainFactory(address(MFProxy)).setTrustedRemoteAddress(109, abi.encodePacked(address(MFProxy))); // same addr in polygon
 
     vm.stopBroadcast();
   }
