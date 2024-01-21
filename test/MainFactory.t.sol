@@ -65,6 +65,8 @@ contract MainFactoryTest is Test, Constants {
     emit Commit(_OWNER, _hash);
     mainFactory.commit(_hash);
 
+    vm.roll(block.number + 1);
+
     vm.expectEmit(true, false, false, true);
     emit Mint(_OWNER, tokenId, salt, precomputed);
     mainFactory.reveal(salt, randomFactor);
@@ -83,6 +85,8 @@ contract MainFactoryTest is Test, Constants {
     mainFactory.commit(_hash);
     vm.expectRevert(CommittedHash.selector);
     mainFactory.commit(_hash);
+
+    vm.roll(block.number + 1);
 
     vm.expectRevert(HashNotFound.selector);
     mainFactory.reveal(wrongSalt, randomFactor);

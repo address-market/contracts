@@ -20,6 +20,7 @@ contract MainFactory is
   OwnableUpgradeable
 {
   error CannotSendToChain();
+  error SameBlockReveal();
   event SetIntermediateFactory(IntermediateFactory intermediateFactory);
   event SetBoundAddressNFT(BoundAddressNFT boundAddressNFT);
   event ChainAdded(uint16 indexed);
@@ -34,7 +35,7 @@ contract MainFactory is
   mapping(uint256 => bytes32) public tokenIdToSalt;
   mapping(uint16 => bool) public chainsToMint;
 
-  uint256 reservedForDeployPrices;
+  mapping(bytes32 => uint256) public hashCommitedAtBlock;
   // mapping(uint256 => uint256) public deployPrices;
 
   BoundAddressNFT public boundAddressNFT;
@@ -78,6 +79,7 @@ contract MainFactory is
     if (hashUsed[_hash] != false) revert UsedHash();
     if (whoCommited[_hash] != address(0)) revert CommittedHash();
     whoCommited[_hash] = msg.sender;
+    hashCommitedAtBlock[_hash] = block.number;
     emit Commit(msg.sender, _hash);
   }
 
@@ -100,6 +102,9 @@ contract MainFactory is
     }
     if (tokenIdToSalt[tokenId] != 0) {
       revert AddressWasDeployed();
+    }
+    if (hashCommitedAtBlock[_hash] == block.number) {
+      revert SameBlockReveal();
     }
     hashUsed[_hash] = true;
     whoCommited[_hash] = address(0);
