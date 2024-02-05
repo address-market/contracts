@@ -9,12 +9,12 @@ import { ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/p
 contract SecondaryMainFactoryUpgrade is Script {
   function run() external {
     vm.startBroadcast();
-    ProxyAdmin proxyAdmin = ProxyAdmin(0x560Fe836930d2Be1994c04162089b32791465dB6);
+    ProxyAdmin proxyAdmin = ProxyAdmin(0x4C17A20b7445F7Eaae37E50792fff2CCECe8728d);
     // ProxyAdmin proxyAdmin = ProxyAdmin(0x7D676152A17c8eaa83e63035158bc71e3893b7C4);
     SecondaryMainFactory mainFactoryImplementation = new SecondaryMainFactory();
 
     proxyAdmin.upgradeAndCall(
-      ITransparentUpgradeableProxy(0x1060235F4C34C1AfEF1d268c532FDb6468d18E06), // proxy
+      ITransparentUpgradeableProxy(0xB9af59262147673C2016b2b10808411166756ed3), // proxy
       // ITransparentUpgradeableProxy(0xdfADA12fBEe1e558134a43558728cB8e944650Dd), // proxy
       address(mainFactoryImplementation),
       abi.encodeWithSelector(SecondaryMainFactory.modify.selector)

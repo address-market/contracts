@@ -5,6 +5,7 @@ import {Constants} from "./Constants.sol";
 import {IntermediateFactory} from "./IntermediateFactory.sol";
 import {BoundAddressNFT} from "./BoundAddressNFT.sol";
 import "./LzAppUpgradeable/NonblockingLzAppUpgradeable.sol";
+// import "./LzAppUpgradeable/interfaces/ILayerZeroEndpoint.sol";
 
 contract SecondaryMainFactory is
   NonblockingLzAppUpgradeable,
@@ -27,6 +28,7 @@ contract SecondaryMainFactory is
 
   function modify() external { // 0x64cf33b8
     // code for modifying while upgrading
+    // lzEndpoint = ILayerZeroEndpoint(0x3c2269811836af69497E5F486A85D7316753cf62);
     emit Modified();
   }
 

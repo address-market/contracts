@@ -32,7 +32,11 @@ contract SecondaryAddressMarketDeploy is Script {
     TransparentUpgradeableProxy MFProxy = new TransparentUpgradeableProxy(
       address(mainFactoryImplementation),
       address(proxyAdmin),
-      abi.encodeWithSelector(SecondaryMainFactory.initialize.selector, address(intermediateFactory), 0x9740FF91F1985D8d2B71494aE1A2f723bb3Ed9E4)
+      abi.encodeWithSelector(
+        SecondaryMainFactory.initialize.selector,
+        address(intermediateFactory),
+        0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675 // eth
+      )
     );
 
     // 5) deploy BoundAddressNFT
