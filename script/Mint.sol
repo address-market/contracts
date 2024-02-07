@@ -27,7 +27,7 @@ contract Mint is Script {
 
     // yul: Runtime{ mstore(0x0, 0x5555555555555555555) return(0x0, 0x20) }
     bytes memory contractToDeploy = abi.encodePacked(uint256(0x6013600d60003960136000f3fe690555555555555555555560005260206000f3));
-    address deployed = mainFactory.deploy(
+    /*address deployed =*/ mainFactory.deploy(
       tokenId,
       contractToDeploy
     );

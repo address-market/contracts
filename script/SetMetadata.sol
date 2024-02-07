@@ -9,7 +9,7 @@ import { ITransparentUpgradeableProxy } from "openzeppelin-contracts/contracts/p
 contract SetMetadata is Script {
   function run() external {
     vm.startBroadcast();
-    MainFactory mainFactory = MainFactory(0xB9af59262147673C2016b2b10808411166756ed3);
+    //MainFactory mainFactory = MainFactory(0xB9af59262147673C2016b2b10808411166756ed3);
     // mainFactory.setMetaUri('https://meta.address-market.com/bound/');
     vm.stopBroadcast();
   }

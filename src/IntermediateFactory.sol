@@ -5,7 +5,8 @@ import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy } from "openz
 import "./deployable/AddressMarketERC20.sol";
 
 contract IntermediateFactory {
-  event Erc20Deployed(AddressMarketERC20);
+  event Erc20Deployed(AddressMarketERC20, address admin, string name, string symbol);
+  event TransparentProxyDeployed(TransparentUpgradeableProxy, address logic, address admin, bytes data);
 
   function deploy(bytes memory code) external returns (address addr) {
     assembly {
@@ -16,13 +17,19 @@ contract IntermediateFactory {
     }
   }
 
-  function deployTransparentProxy(address logic, address admin, bytes calldata data) external returns (address addr) {
+  function deployTransparentProxy(address logic, address admin, bytes calldata data) external returns (address) {
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(logic, admin, data);
+    emit TransparentProxyDeployed(proxy, logic, admin, data);
     return address(proxy);
   }
 
-  // function deployErc20(address admin, string memory name, string memory symbol) external returns (address addr) {
-  //   AddressMarketERC20 token = new AddressMarketERC20(admin, name, symbol);
-  //   emit Erc20Deployed(token); // backend should get it and verify
-  // }
+  function deployErc20(
+    address admin,
+    string memory name,
+    string memory symbol
+  ) external returns (address) {
+    AddressMarketERC20 token = new AddressMarketERC20(admin, name, symbol);
+    emit Erc20Deployed(token, admin, name, symbol);
+    return address(token);
+  }
 }

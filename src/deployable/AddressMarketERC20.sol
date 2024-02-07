@@ -16,4 +16,8 @@ contract AddressMarketERC20 is ERC20, Ownable {
   function mint(address receiver, uint256 value) external onlyOwner {
     _mint(receiver, value);
   }
+
+  function burn(uint256 value) external onlyOwner {
+    _burn(msg.sender, value);
+  }
 }
