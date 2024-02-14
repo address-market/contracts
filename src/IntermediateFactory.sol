@@ -5,15 +5,15 @@ import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy } from "openz
 import "./deployable/AddressMarketERC20.sol";
 
 contract IntermediateFactory {
-  event Erc20Deployed(AddressMarketERC20, address admin, string name, string symbol);
+  event Erc20Deployed(AddressMarketERC20, address admin, string name, string symbol, uint256 premintAmount);
   event TransparentProxyDeployed(TransparentUpgradeableProxy, address logic, address admin, bytes data);
 
   function deploy(bytes memory code) external returns (address addr) {
     assembly {
       addr := create(0, add(code, 0x20), mload(code))
-      if iszero(extcodesize(addr)) {
-        revert(0, 0)
-      }
+      // if iszero(extcodesize(addr)) {
+      //   revert(0, 0)
+      // }
     }
   }
 
@@ -26,10 +26,11 @@ contract IntermediateFactory {
   function deployErc20(
     address admin,
     string memory name,
-    string memory symbol
+    string memory symbol,
+    uint256 premintAmount
   ) external returns (address) {
-    AddressMarketERC20 token = new AddressMarketERC20(admin, name, symbol);
-    emit Erc20Deployed(token, admin, name, symbol);
+    AddressMarketERC20 token = new AddressMarketERC20(admin, name, symbol, premintAmount);
+    emit Erc20Deployed(token, admin, name, symbol, premintAmount);
     return address(token);
   }
 }

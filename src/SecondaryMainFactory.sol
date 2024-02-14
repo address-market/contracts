@@ -92,7 +92,7 @@ contract SecondaryMainFactory is
     return intermediateFactoryClone.deploy(code); // deploy from factory using create opcode (not create2)
   }
 
-  modifier manageTokens(uint256 tokenId) {
+  modifier manageTokens(uint256 tokenId) { // TODO unit test
     if (boundAddressNFT.ownerOf(tokenId) != msg.sender) {
       // also throws if not exists
       revert WrongOwner();
@@ -119,6 +119,18 @@ contract SecondaryMainFactory is
     bytes32 salt = tokenIdToSalt[tokenId];
     IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
     deployedAddress = intermediateFactoryClone.deployTransparentProxy(logic, admin, data);
+  }
+
+  function deployErc20(
+    uint256 tokenId,
+    address admin,
+    string memory name,
+    string memory symbol,
+    uint256 premintAmount
+  ) external manageTokens(tokenId) returns (address deployedAddress) {
+    bytes32 salt = tokenIdToSalt[tokenId];
+    IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
+    deployedAddress = intermediateFactoryClone.deployErc20(admin, name, symbol, premintAmount);
   }
 
   function setIntermediateFactory(IntermediateFactory _intermediateFactory) external onlyOwner {

@@ -185,6 +185,18 @@ contract MainFactory is
     deployedAddress = intermediateFactoryClone.deployTransparentProxy(logic, admin, data);
   }
 
+  function deployErc20(
+    uint256 tokenId,
+    address admin,
+    string memory name,
+    string memory symbol,
+    uint256 premintAmount
+  ) external manageTokens(tokenId) returns (address deployedAddress) {
+    bytes32 salt = tokenIdToSalt[tokenId];
+    IntermediateFactory intermediateFactoryClone = _deployIntermediateFactory(salt);
+    deployedAddress = intermediateFactoryClone.deployErc20(admin, name, symbol, premintAmount);
+  }
+
   function bind(uint256 tokenId) external {
     if (ownerOf(tokenId) != msg.sender) {
       revert WrongOwner();

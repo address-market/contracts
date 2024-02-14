@@ -12,7 +12,7 @@ contract IntFactoryUpgrade is Script {
     vm.startBroadcast();
     IntermediateFactory implementation = new IntermediateFactory();
 
-    MainFactory mainFactory = MainFactory(0xdfADA12fBEe1e558134a43558728cB8e944650Dd);
+    MainFactory mainFactory = MainFactory(0xB9af59262147673C2016b2b10808411166756ed3);
 
 
     mainFactory.setIntermediateFactory(implementation);

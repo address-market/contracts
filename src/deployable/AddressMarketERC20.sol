@@ -8,9 +8,13 @@ contract AddressMarketERC20 is ERC20, Ownable {
   constructor(
     address owner,
     string memory name,
-    string memory symbol
+    string memory symbol,
+    uint256 premintAmount
   ) ERC20(name, symbol) {
     _transferOwnership(owner);
+    if (premintAmount > 0) {
+      _mint(owner, premintAmount);
+    }
   }
 
   function mint(address receiver, uint256 value) external onlyOwner {
