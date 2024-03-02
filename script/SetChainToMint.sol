@@ -13,7 +13,7 @@ contract SetChainToMint is Script {
   function run() external {
     vm.startBroadcast();
     MainFactory mainFactory = MainFactory(0xB9af59262147673C2016b2b10808411166756ed3);
-    mainFactory.toggleChainToMint(184, true);
+    mainFactory.toggleChainToMint(243, true);
     vm.stopBroadcast();
   }
 }

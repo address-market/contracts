@@ -28,7 +28,7 @@ contract SecondaryMainFactory is
 
   function modify() external { // 0x64cf33b8
     // code for modifying while upgrading
-    // lzEndpoint = ILayerZeroEndpoint(0x3c2269811836af69497E5F486A85D7316753cf62);
+    // lzEndpoint = ILayerZeroEndpoint(0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7);
     emit Modified();
   }
 

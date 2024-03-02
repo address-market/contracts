@@ -15,7 +15,6 @@ contract SecondaryMainFactoryUpgrade is Script {
 
     proxyAdmin.upgradeAndCall(
       ITransparentUpgradeableProxy(0xB9af59262147673C2016b2b10808411166756ed3), // proxy
-      // ITransparentUpgradeableProxy(0xdfADA12fBEe1e558134a43558728cB8e944650Dd), // proxy
       address(mainFactoryImplementation),
       abi.encodeWithSelector(SecondaryMainFactory.modify.selector)
     );
