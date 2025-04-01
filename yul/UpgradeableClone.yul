@@ -7,10 +7,10 @@ object "UpgradeableClone" {
     code {
       let impl := sload(0)
       switch impl
-      case 0 {
+      case 0 { // first call - to add implementation
         sstore(0, calldataload(0))
       }
-      default {
+      default { // other calls - to act as a proxy
         calldatacopy(0, 0, calldatasize())
         let success := delegatecall(
           gas(),
