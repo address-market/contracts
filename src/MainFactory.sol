@@ -46,8 +46,8 @@ contract MainFactory is
 
   function modify() external { // 0x64cf33b8
     // code for modifying while upgrading
-    chainsToMint[145] = true;
-    emit ChainAdded(145);
+    // chainsToMint[145] = true;
+    // emit ChainAdded(145);
     emit Modified();
   }
 
